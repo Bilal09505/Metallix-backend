@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  cnic      String   @unique
+  phone     String
+  password  String
+  selfie    String?
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  purchases   Purchase[]
+  messages    Message[]
+  investments Investment[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model Metal {
+  id          String   @id @default(cuid())
+  name        String
+  symbol      String
+  currentRate Float
+  unit        String   @default("kg")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  purchases   Purchase[]
+  rateHistory RateHistory[]
+  offers      Offer[] // Added reverse relation
+
+  @@map("metals")
+}
+
+model RateHistory {
+  id      String   @id @default(cuid())
+  metalId String
+  rate    Float
+  date    DateTime @default(now())
+
+  // Relations
+  metal Metal @relation(fields: [metalId], references: [id], onDelete: Cascade)
+
+  @@map("rate_history")
+}
+
+model Purchase {
+  id           String         @id @default(cuid())
+  userId       String
+  metalId      String
+  quantity     Float
+  buyPrice     Float
+  currentPrice Float
+  status       PurchaseStatus @default(ACTIVE)
+  purchaseDate DateTime       @default(now())
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metal   Metal    @relation(fields: [metalId], references: [id], onDelete: Cascade)
+  payment Payment?
+
+  @@map("purchases")
+}
+
+enum PurchaseStatus {
+  ACTIVE
+  SOLD
+  DELIVERED
+  CANCELLED
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  purchaseId    String        @unique
+  amount        Float
+  method        PaymentMethod
+  transactionId String?
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  JAZZCASH
+  EASYPAISA
+  BANK_TRANSFER
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Offer {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  metalId     String
+  minQuantity Float
+  maxQuantity Float
+  specialRate Float?
+  isActive    Boolean  @default(true)
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+
+  // Relations
+  metal Metal @relation(fields: [metalId], references: [id], onDelete: Cascade)
+
+  @@map("offers")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  response  String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contacts")
+}
+
+model Investment {
+  id             String           @id @default(cuid())
+  userId         String
+  investorName   String
+  cnic           String
+  passport       String?
+  country        String
+  amountPKR      Float
+  amountUSD      Float?
+  paymentMethod  String
+  status         InvestmentStatus @default(PENDING)
+  investmentDate DateTime         @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("investments")
+}
+
+enum InvestmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
